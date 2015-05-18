@@ -37,6 +37,8 @@ def main(argv):
     print("chip8 emulator")
     print("argv: ", argv)
 
+    cpu = CPU()
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
