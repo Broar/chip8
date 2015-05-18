@@ -15,11 +15,14 @@ REQUIRED_ARGS = 2
 def usage(program):
     """
 
-    Prints a usage message to the command-line
+    Create a message describing how to invoke the program
+
+    @param program name of the program being return
+    @returns a string containing the usage message
 
     """
 
-    print("Usage: python {0} rom".format(program))
+    return "Usage: python {0} rom".format(program)
 
 def main(argv):
     """
@@ -30,9 +33,9 @@ def main(argv):
 
     """
 
+    # Check that there are enough arguments to run the emulator
     if (len(argv) < REQUIRED_ARGS):
-        usage(argv[0])
-        exit()
+        exit(usage(argv[0]))
 
     print("chip8 emulator")
     print("argv: ", argv)
