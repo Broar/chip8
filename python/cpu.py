@@ -66,7 +66,14 @@ class CPU(object):
         self.sound = 0
 
         # Opcode tables
-        self.opcodes = {}
+        self.opcodes = {
+            0x1000 : self.jump,
+            0x2000 : self.call,
+            0x3000 : self.skip_vx_equals_kk,
+            0x4000 : self.skip_vx_not_equal_kk,
+            0x5000 : self.skip_vx_equal_vy,
+            0x6000 : self.set_vx_to_kk,
+            0x7000 : self.add_kk_to_vx}
 
         self.load_font()
 
@@ -196,7 +203,7 @@ class CPU(object):
         @returns the lower 4 bits of the high byte of an instruction
 
         """
-        return opcode & 0x0F00
+        return (opcode & 0x0F00) >> 8
 
     def get_y(self, opcode):
         """
@@ -207,7 +214,7 @@ class CPU(object):
         @returns the higher 4 bits of the low byte of an instruction
         
         """
-        return opcode & 0x00F0
+        return (opcode & 0x00F0) >> 4
 
     def get_byte(self, opcode):
         """
@@ -218,4 +225,116 @@ class CPU(object):
         @returns the lowest 8 bits of an instruction
         
         """
-        return opcode & 0x00F0
+        return opcode & 0x00FF
+
+    def jump(self, opcode):
+        """
+
+        1nnn - JP addr
+        Jump to location nnn.
+
+        Set the program counter to nnn.
+
+        @param opcode the opcode
+
+        """
+        self.pc = self.get_addr(opcode)
+
+    def call(self, opcode):
+        """
+        
+        2nnn - CALL addr
+        Call subroutine at nnn.
+
+        Increment the stack pointer and puts the current PC on the top of the
+        stack. The PC is then set to nnn.
+
+        @param opcode the opcode
+
+        """
+        self.sp += 1
+        self.stack[self.sp] = self.pc
+        self.pc = self.get_addr(opcode)
+
+    def skip_vx_equals_kk(self, opcode):
+        """
+
+        3xkk - SE Vx, byte
+        Skip next instruction if Vx = kk.
+
+        Compare register Vx to kk, and if they are equal, increment the 
+        program counter by 2.
+
+        @param opcode the opcode
+
+        """
+        x = self.get_x(opcode)
+        if (self.v[x] == self.get_byte(opcode)):
+            self.pc += 2
+
+    def skip_vx_not_equal_kk(self, opcode):
+        """
+
+        3xkk - SE Vx, byte
+        Skip next instruction if Vx != kk.
+
+        Compare register Vx to kk, and if they are not equal, increment the 
+        program counter by 2.
+
+        @param opcode the opcode
+
+        """
+        x = self.get_x(opcode)
+        if (self.v[x] == self.get_byte(opcode)):
+            self.pc += 2
+
+        self.pc += 2
+
+    def skip_vx_equal_vy(self, opcode):
+        """
+
+        5xy0 - SE Vx, Vy
+        Skip next instruction if Vx = Vy.
+
+        Compare register Vx to register Vy, and if they are equal, increment 
+        the program counter by 2.
+
+        @param opcode the opcode
+
+        """
+        x = self.get_x(opcode)
+        y = self.get_y(opcode)
+        if (self.v[x] == self.v[y]):
+            self.pc += 2
+
+        self.pc += 2
+
+    def set_vx_to_kk(self, opcode):
+        """
+
+        6xkk - LD Vx, byte
+        Set Vx = kk.
+
+        Put the value kk into register Vx.
+
+        @param opcode the opcode
+
+        """
+        x = self.get_x(opcode)
+        self.v[x] = self.get_byte(opcode)
+        self.pc += 2
+
+    def add_kk_to_vx(self, opcode):
+        """
+
+        7xkk - ADD Vx, byte
+        Set Vx = Vx + kk.
+
+        Adds the value kk to the value of register Vx, then stores the result in Vx.
+
+        @param opcode the opcode
+
+        """
+        x = self.get_x(opcode)
+        self.v[x] += self.get_byte(opcode)
+        self.pc += 2
