@@ -59,6 +59,7 @@ class CPU(object):
 
         # Opcode table: 'K' denotes an opcode with multiple matches
         self.opcodes = {
+            0x0000 : self._0KKK,
             0x1000 : self._1NNN,
             0x2000 : self._2NNN,
             0x3000 : self._3XNN,
@@ -71,6 +72,11 @@ class CPU(object):
             0xA000 : self._ANNN,
             0xB000 : self._BNNN,
             0xC000 : self._CXNN}
+
+        # Subroutine table
+        self.subroutine = {
+            0x0000 : self._00E0, 
+            0x000E : self._00EE}
 
         # Arthimetic table
         self.arthimetic = {
@@ -173,11 +179,11 @@ class CPU(object):
         Perform any updates to the CPU's timers
 
         """
-        if (self.delay > 0):
+        if self.delay > 0:
             self.delay -= 1
 
-        if (self.sound > 0):
-            if (self.sound == 1):
+        if self.sound > 0:
+            if self.sound == 1:
                 print("Beep!")
             self.sound -= 1
 
@@ -236,6 +242,40 @@ class CPU(object):
         """
         return (opcode & 0x00F0) >> 4
 
+    def _0KKK(self, opcode):
+        """
+
+        Determine which subroutine action to perform based on the specified 
+        opcode
+
+        @param opcode the opcode
+
+        """
+        self.subroutine[self.get_n(opcode)]()
+
+    def _00E0(self):
+        """
+
+        00E0
+        Clear the screen
+
+        """
+        for x in range(HEIGHT):
+            for y in range(WIDTH):
+                self.gfx[x][y] = 0x0
+
+        self.pc += 2
+
+    def _00EE(self):
+        """
+
+        00EE
+        Return from a subroutine
+
+        """
+        self.sp -= 1
+        self.pc = self.stack[self.sp] + 2   
+
     def _1NNN(self, opcode):
         """
 
@@ -256,8 +296,8 @@ class CPU(object):
         @param opcode the opcode
 
         """
-        self.sp += 1
         self.stack[self.sp] = self.pc
+        self.sp += 1
         self.pc = self.get_nnn(opcode)
 
     def _3XNN(self, opcode):
@@ -270,7 +310,7 @@ class CPU(object):
 
         """
         x = self.get_x(opcode)
-        if (self.v[x] == self.get_nn(opcode)):
+        if self.v[x] == self.get_nn(opcode):
             self.pc += 2
 
         self.pc += 2
@@ -409,7 +449,7 @@ class CPU(object):
         @param y the index for VY
 
         """
-        if (self.v[x] + self.v[y] > 255):
+        if self.v[x] + self.v[y] > 255:
             self.v[0xF] = 1
         else:
             self.v[0XF] = 0
@@ -430,7 +470,7 @@ class CPU(object):
         @param y the index for VY
 
         """
-        if (self.v[x] < self.v[y]):
+        if self.v[x] < self.v[y]:
             self.v[x] = 256 + (self.v[x] - self.v[y])
             self.v[0xF] = 0
         else:
@@ -467,7 +507,7 @@ class CPU(object):
         @param y the idnex for VY
 
         """
-        if (self.v[y] < self.v[x]):
+        if self.v[y] < self.v[x]:
             self.v[x] = 256 + (self.v[y] - self.v[x])
             self.v[0xF] = 0
         else:
@@ -504,7 +544,7 @@ class CPU(object):
         """
         x = self.get_x(opcode)
         y = self.get_y(opcode)
-        if (self.v[x] != self.v[y]):
+        if self.v[x] != self.v[y]:
             self.pc += 2
 
         self.pc += 2

@@ -25,6 +25,28 @@ class TestCPU(unittest.TestCase):
     def setUp(self):
         self.cpu = CPU()
 
+    def test_00E0(self):
+        # Draw to every other pixel on the screen
+        for x in range(len(self.cpu.gfx)):
+            for y in range(len(self.cpu.gfx[x])):
+                if y % 2 == 0:
+                    self.cpu.gfx[x][y] = 0x1
+
+        # Clear the screen, then test it
+        self.cpu._00E0()
+
+        for x in range(len(self.cpu.gfx)):
+            for y in range(len(self.cpu.gfx[x])):
+                self.assertEqual(0x0, self.cpu.gfx[x][y])
+
+    def test_00EE(self):
+        # Enter a subroutine, then immediately exit
+        # Check the values of the sp and pc
+        self.cpu._2NNN(0x2300)
+        self.cpu._00EE()
+        self.assertEqual(0, self.cpu.sp)
+        self.assertEqual(0x202, self.cpu.pc)
+
     def test_1NNN(self):
         self.cpu._1NNN(0x1100)
         self.assertEqual(0x100, self.cpu.pc)
@@ -34,7 +56,8 @@ class TestCPU(unittest.TestCase):
         self.assertEqual(1, self.cpu.sp)
 
         # pc is initially located at 0x200, which is now stored on the stack
-        self.assertEqual(0x200, self.cpu.stack[self.cpu.sp])
+        self.assertEqual(0x200, self.cpu.stack[self.cpu.sp - 1])
+        self.assertEqual(0x000, self.cpu.stack[self.cpu.sp])
         self.assertEqual(0x100, self.cpu.pc)
 
     def test_3XNN(self):
