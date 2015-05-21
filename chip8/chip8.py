@@ -1,4 +1,5 @@
 import sys
+from time import sleep
 from cpu import CPU
 
 """
@@ -11,6 +12,7 @@ Contains the main driver function for the CHIP-8 emulator
 """
 
 REQUIRED_ARGS = 2
+DELAY = 0.16
 
 def usage(program):
     """
@@ -41,6 +43,12 @@ def main(argv):
     print("argv: ", argv)
 
     cpu = CPU()
+    cpu.load_rom(argv[1])
+
+    while True:
+        cpu.execute_cycle()
+        sleep(DELAY)
+
 
 
 if __name__ == "__main__":

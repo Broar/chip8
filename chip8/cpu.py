@@ -19,6 +19,25 @@ HEIGHT = 32
 WIDTH = 64
 KEYS = 16
 
+FONTSET = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
+    0x20, 0x60, 0x20, 0x20, 0x70, # 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, # 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, # 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, # 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, # 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, # 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, # 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, # 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, # 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, # A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, # B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, # C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, # D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  # F
+]
+
 class CPU(object):
     """
 
@@ -75,7 +94,8 @@ class CPU(object):
             0x9000 : self._9XY0,
             0xA000 : self._ANNN,
             0xB000 : self._BNNN,
-            0xC000 : self._CXNN, 
+            0xC000 : self._CXNN,
+            0xD000 : self._DXYN,
             0xE000 : self._EXKK,
             0xF000 : self._FXKK}
 
@@ -154,7 +174,8 @@ class CPU(object):
         """
 
         # Read the CHIP-8 fontset into memory from addresses 0x0 - 0x50
-        self.load("../res/font.chip8")
+        for i in range(len(FONTSET)):
+            self.memory[i] = FONTSET[i]
 
     def execute_cycle(self):
         """
@@ -162,8 +183,8 @@ class CPU(object):
         Perform a single cycle of the CHIP-8 CPU
 
         """
-        execute_opcode(fetch_opcode())
-        update_timers()
+        self.execute_opcode(self.fetch_opcode())
+        self.update_timers()
 
     def fetch_opcode(self):
         """
@@ -194,6 +215,7 @@ class CPU(object):
         @param opcode the opcode to decode
 
         """
+        print(hex(opcode))
         self.opcodes[self.decode_opcode(opcode)](opcode)
 
     def update_timers(self):
@@ -606,6 +628,18 @@ class CPU(object):
         """
         x = self.get_x(opcode)
         self.v[x] = randint(0, 255) & self.get_nn(opcode)
+        self.pc += 2
+
+    def _DXYN(self, opcode):
+        """
+
+        FX65
+        Fill registers V0 to VX inclusive with the values stored in memory
+        starting at address I. I is set to I + X + 1 after operation
+
+        @param opcode the opcode
+
+        """
         self.pc += 2
 
     def _EXKK(self, opcode):
