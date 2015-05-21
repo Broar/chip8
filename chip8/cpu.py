@@ -15,8 +15,9 @@ MEMORY = 4096
 REGISTERS = 16
 STACK = 16
 PROGRAM_COUNTER_START = 0x200
-HEIGHT = 64
-WIDTH = 32
+HEIGHT = 32
+WIDTH = 64
+KEYS = 16
 
 class CPU(object):
     """
@@ -37,6 +38,9 @@ class CPU(object):
 
         # Graphics
         self.gfx = [[0 for x in range(WIDTH)] for y in range(HEIGHT)]
+
+        # Keys
+        self.keys = [False for x in range(KEYS)]
 
         # Main memory
         self.memory = [0 for x in range(MEMORY)]
@@ -71,7 +75,9 @@ class CPU(object):
             0x9000 : self._9XY0,
             0xA000 : self._ANNN,
             0xB000 : self._BNNN,
-            0xC000 : self._CXNN}
+            0xC000 : self._CXNN, 
+            0xE000 : self._EXKK,
+            0xF000 : self._FXKK}
 
         # Subroutine table
         self.subroutine = {
@@ -89,6 +95,23 @@ class CPU(object):
             0x0006 : self._8XY6,
             0x0007 : self._8XY7,
             0x000E : self._8XYE}
+
+        # Skip keys table
+        self.skip_keys = {
+            0x000E : self._EX9E,
+            0x0001 : self._EXA1}
+
+        # Misc table
+        self.misc = {
+            0x0007 : self._FX07,
+            0x000A : self._FX0A,
+            0x0015 : self._FX15,
+            0x0018 : self._FX18,
+            0x001E : self._FX1E,
+            0x0029 : self._FX29,
+            0x0033 : self._FX33,
+            0x0055 : self._FX55,
+            0x0065 : self._FX65}
 
         self.load_font()
 
@@ -583,4 +606,178 @@ class CPU(object):
         """
         x = self.get_x(opcode)
         self.v[x] = randint(0, 255) & self.get_nn(opcode)
+        self.pc += 2
+
+    def _EXKK(self, opcode):
+        """
+
+        Determine which skip to perform based on the specified opcode
+
+        @param opcode the opcode
+
+        """
+        self.skip_keys[self.get_n(opcode)](self.get_x(opcode))
+
+    def _EX9E(self, x):
+        """
+
+        EX9E
+        Skip the following instruction if the key corresponding to the 
+        hex value currently stored in register VX is pressed
+
+        @param x the index for VX 
+
+        """
+        if self.keys[self.v[x]]:
+            self.pc += 2
+
+        self.pc += 2
+
+    def _EXA1(self, x):
+        """
+
+        EXA1
+        Skip the following instruction if the key corresponding to the 
+        hex value currently stored in register VX is not pressed
+
+        @param x the index for VX
+
+        """
+        if not self.keys[self.v[x]]:
+            self.pc += 2
+
+        self.pc += 2
+
+    def _FXKK(self, opcode):
+        """
+
+        Determine which misc action to perform based on the specified opcode
+
+        @param opcode the opcode
+
+        """
+        self.misc[self.get_nn(opcode)](self.get_x(opcode))
+
+    def _FX07(self, x):
+        """
+
+        FX07
+        Store the current value of the delay timer in register VX
+
+        @param x the index for VX
+
+        """
+        self.v[x] = self.delay
+        self.pc += 2
+
+
+    def _FX0A(self, x):
+        """
+
+        FX0A
+        Wait for a keypress and store the result in register VX
+
+        @param x the index for VX
+
+        """
+        pass
+
+    def _FX15(self, x):
+        """
+
+        FX15
+        Set the delay timer to the value of register VX
+
+        @param x the index for VX
+
+        """
+        self.delay = self.v[x]
+        self.pc += 2
+
+    def _FX18(self, x):
+        """
+
+        FX18
+        Set the sound timer to the value of register VX
+
+        @param x the index for VX
+
+        """
+        self.sound = self.v[x]
+        self.pc += 2
+
+    def _FX1E(self, x):
+        """"
+
+        FX1E
+        Add the value stored in register VX to register I
+
+        @param x the index for VX
+
+        """
+        self.i += self.v[x]
+        self.pc += 2
+
+    def _FX29(self, x):
+        """
+
+        FX29
+        Set I to the memory address of the sprite data corresponding
+        to the hexadecimal digit stored in register VX
+
+        @param x the index for VX
+
+        """
+
+        # All sprites are 5 bytes, so we must multiply by this
+        self.i = self.v[x] * 5
+        self.pc += 2
+
+    def _FX33(self, x):
+        """
+
+        FX33
+        Store the binary-coded decimal equivalent of the value stored
+        in register VX at addresses I, I+1, and I+2
+
+        @param x the index for VX
+
+        """
+        n = self.v[x]
+        for j in range(2, -1, -1):
+            self.memory[self.i + j] = n % 10
+            n = int(n / 10)
+
+        self.pc += 2
+
+    def _FX55(self, x):
+        """
+
+        FX55
+        Store the values of registers V0 to VX inclusive in memory starting 
+        at address I. I is set to I + X + 1 after operation
+
+        @param x the index for VX
+
+        """
+        for j in range(x + 1):
+            self.memory[self.i] = self.v[j]
+            self.i += 1
+
+        self.pc += 2
+
+    def _FX65(self, x):
+        """
+
+        FX65
+        Fill registers V0 to VX inclusive with the values stored in memory
+        starting at address I. I is set to I + X + 1 after operation
+
+        @param x the index for VX
+
+        """
+        for j in range(x + 1):
+            self.v[j] = self.memory[self.i]
+            self.i += 1
+
         self.pc += 2

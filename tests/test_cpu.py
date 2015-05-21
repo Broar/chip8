@@ -257,6 +257,103 @@ class TestCPU(unittest.TestCase):
         self.assertTrue(self.cpu.v[0] >= 0 and self.cpu.v[0] <= 255)
         self.assertEqual(0x202, self.cpu.pc)
 
+    def test_EX9E(self):
+        # Test failure of the key at v[x] being pressed
+        self.cpu._EX9E(0)
+        self.assertEqual(0x202, self.cpu.pc)
+
+        # Test success of the key at v[x] being pressed
+        # We will directly set the values of the cpu to simulate this case
+        self.cpu.keys[0] = True
+        self.cpu._EX9E(0)
+        self.assertEqual(0x206, self.cpu.pc)
+
+    def test_EXA1(self):
+        # Test success of the key at v[x] not being pressed
+        self.cpu._EXA1(0)
+        self.assertEqual(0x204, self.cpu.pc)
+
+        # Test failure of the key at v[x] not being pressed
+        # We will directly set the values of the cpu to simulate this case
+        self.cpu.keys[0] = True
+        self.cpu._EXA1(0)
+        self.assertEqual(0x206, self.cpu.pc)
+
+    def test_FX07(self):
+        # Set the delay timer directly
+        self.cpu.delay = 1
+        self.cpu._FX07(0)
+        self.assertEqual(1, self.cpu.v[0])
+        self.assertEqual(0x202, self.cpu.pc)
+
+    def test_FX0A(self):
+        pass
+
+    def test_FX15(self):
+        self.cpu._6XNN(0x6010)
+        self.cpu._FX15(0)
+        self.assertEqual(0x10, self.cpu.delay)
+        self.assertEqual(0x204, self.cpu.pc)
+
+    def test_FX18(self):
+        self.cpu._6XNN(0x6010)
+        self.cpu._FX18(0)
+        self.assertEqual(0x10, self.cpu.sound)
+        self.assertEqual(0x204, self.cpu.pc)
+
+    def test_FX1E(self):
+        self.cpu._6XNN(0x6010)
+        self.cpu._ANNN(0xA100)
+        self.cpu._FX1E(0)
+        self.assertEqual(0x110, self.cpu.i)
+        self.assertEqual(0x206, self.cpu.pc)
+
+    def test_FX29(self):
+        self.cpu._6XNN(0x6010)
+        self.cpu._FX29(0)
+        self.assertEqual(0x50, self.cpu.i)
+        self.assertEqual(0x204, self.cpu.pc)
+
+    def test_FX33(self):
+        # Place 245 into V0. 
+        self.cpu._6XNN(0x60F5)
+        self.cpu._FX33(0)
+
+        # We expect 2, 4, 5 to be located at i, i + 1, and i + 2, respectively
+        self.assertEqual(2, self.cpu.memory[self.cpu.i])
+        self.assertEqual(4, self.cpu.memory[self.cpu.i + 1])
+        self.assertEqual(5, self.cpu.memory[self.cpu.i + 2])
+        self.assertEqual(0x204, self.cpu.pc)
+
+    def test_FX55(self):
+        self.cpu._6XNN(0x6001)
+        self.cpu._6XNN(0x6102)
+        self.cpu._6XNN(0x6203)
+        self.cpu._6XNN(0x6304)
+
+        j = self.cpu.i
+        self.cpu._FX55(3)
+
+        self.assertEqual(1, self.cpu.memory[j])
+        self.assertEqual(2, self.cpu.memory[j + 1])
+        self.assertEqual(3, self.cpu.memory[j + 2])
+        self.assertEqual(4, self.cpu.memory[j + 3])
+        self.assertEqual(4, self.cpu.i)
+        self.assertEqual(0x20A, self.cpu.pc)
+
+    def test_FX65(self):
+        for j in range(3):
+            self.cpu.memory[self.cpu.i + j] = j
+
+        self.cpu._FX65(2)
+
+        self.assertEqual(0, self.cpu.v[0])
+        self.assertEqual(1, self.cpu.v[1])
+        self.assertEqual(2, self.cpu.v[2])
+        self.assertEqual(0, self.cpu.v[3])
+        self.assertEqual(3, self.cpu.i)
+        self.assertEqual(0x202, self.cpu.pc)
+
 
 if __name__ == "__main__":
     unittest.main()
