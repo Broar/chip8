@@ -1,6 +1,8 @@
 import sys
+import pygame
+from pygame import HWSURFACE
 from time import sleep
-from cpu import CPU
+from cpu import CPU, HEIGHT, WIDTH
 
 """
 
@@ -11,8 +13,17 @@ Contains the main driver function for the CHIP-8 emulator
 
 """
 
+# Usage
 REQUIRED_ARGS = 2
-DELAY = 0.16
+
+# Timing
+DELAY = 0.016
+
+# Screen display
+SCALE = 10
+DEPTH = 8
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 
 def usage(program):
     """
@@ -25,6 +36,25 @@ def usage(program):
     """
 
     return "Usage: python {0} rom".format(program)
+
+def draw(screen, gfx):
+    """
+
+    Draw the graphics to the screen
+
+    @param screen the screen to be drawn to
+    @param gfx the graphics to draw to the screen
+
+    """
+    
+    for y in range(HEIGHT):
+        for x in range(WIDTH):
+            if gfx[(y * WIDTH) + x]:
+                pygame.draw.rect(screen, WHITE, ((x % WIDTH) * SCALE, (y % HEIGHT) * SCALE, SCALE, SCALE))
+            else:
+                pygame.draw.rect(screen, BLACK, ((x % WIDTH) * SCALE, (y % HEIGHT) * SCALE, SCALE, SCALE))
+
+    pygame.display.flip()
 
 def main(argv):
     """
@@ -42,14 +72,29 @@ def main(argv):
     print("chip8 emulator")
     print("argv: ", argv)
 
+    # Prepare the emulator
     cpu = CPU()
     cpu.load_rom(argv[1])
 
-    while True:
+    # Prepare the screen to be displayed
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH * SCALE, HEIGHT * SCALE), HWSURFACE, DEPTH)
+    pygame.display.set_caption("CHIP-8")
+
+    # Emulation loop
+    running = True
+    while running:
         cpu.execute_cycle()
+
+        if cpu.shouldDraw:
+            draw(screen, cpu.gfx)
+            cpu.shouldDraw = False
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
         sleep(DELAY)
-
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

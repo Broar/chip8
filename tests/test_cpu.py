@@ -27,17 +27,15 @@ class TestCPU(unittest.TestCase):
 
     def test_00E0(self):
         # Draw to every other pixel on the screen
-        for x in range(len(self.cpu.gfx)):
-            for y in range(len(self.cpu.gfx[x])):
-                if y % 2 == 0:
-                    self.cpu.gfx[x][y] = 0x1
+        for i in range(len(self.cpu.gfx)):
+            if i % 2 == 0:
+                self.cpu.gfx[i] = 0x1
 
         # Clear the screen, then test it
         self.cpu._00E0()
 
-        for x in range(len(self.cpu.gfx)):
-            for y in range(len(self.cpu.gfx[x])):
-                self.assertEqual(0x0, self.cpu.gfx[x][y])
+        for i in range(len(self.cpu.gfx)):
+            self.assertEqual(0x0, self.cpu.gfx[i])
 
     def test_00EE(self):
         # Enter a subroutine, then immediately exit

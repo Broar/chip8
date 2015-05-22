@@ -1,4 +1,6 @@
 import struct
+import pygame
+from pygame.locals import  *
 from random import randint
 
 """
@@ -18,6 +20,25 @@ PROGRAM_COUNTER_START = 0x200
 HEIGHT = 32
 WIDTH = 64
 KEYS = 16
+
+KEY_MAP = {
+    K_1 : 0x0,
+    K_2 : 0x1,
+    K_3 : 0x2,
+    K_4 : 0x3,
+    K_q : 0x4,
+    K_w : 0x5,
+    K_e : 0x6,
+    K_r : 0x7,
+    K_a : 0x8,
+    K_s : 0x9,
+    K_d : 0xA,
+    K_f : 0xB,
+    K_z : 0xC,
+    K_x : 0xD,
+    K_c : 0xE,
+    K_v : 0xF
+}
 
 FONTSET = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
@@ -56,7 +77,8 @@ class CPU(object):
         """
 
         # Graphics
-        self.gfx = [[0 for x in range(WIDTH)] for y in range(HEIGHT)]
+        self.gfx = [0 for y in range(WIDTH * HEIGHT)]
+        self.shouldDraw = False
 
         # Keys
         self.keys = [False for x in range(KEYS)]
@@ -134,6 +156,34 @@ class CPU(object):
             0x0065 : self._FX65}
 
         self.load_font()
+
+    def __str__(self):
+        """
+
+        Construct a string representing the display state
+
+        @returns a string representing the display state
+
+        """
+
+        string = ""
+        for i in range(WIDTH * HEIGHT):
+            if self.gfx[i]:
+                string += "*"
+            else:
+                string += " "
+
+            if i % 64 == 0:    
+                string += "\n"
+
+        string += "\nPC = {0}\n".format(hex(self.pc))
+        string += "Registers:\n"
+        string += "I = {0}\n".format(hex(self.i))
+
+        for i in range(REGISTERS):
+            string += "V{0} = {1}\n".format(i, hex(self.v[i]))
+
+        return string
 
     def load(self, path, offset=0):
         """
@@ -215,7 +265,7 @@ class CPU(object):
         @param opcode the opcode to decode
 
         """
-        print(hex(opcode))
+        #print(hex(opcode))
         self.opcodes[self.decode_opcode(opcode)](opcode)
 
     def update_timers(self):
@@ -305,10 +355,10 @@ class CPU(object):
         Clear the screen
 
         """
-        for x in range(HEIGHT):
-            for y in range(WIDTH):
-                self.gfx[x][y] = 0x0
+        for i in range(WIDTH * HEIGHT):
+            self.gfx[i] = 0x0
 
+        self.shouldDraw = True
         self.pc += 2
 
     def _00EE(self):
@@ -536,7 +586,7 @@ class CPU(object):
 
         """
         self.v[0xF] = self.v[y] & 0x01
-        self.v[y] <<= 1
+        self.v[y] >>= 1
         self.v[x] = self.v[y]
         self.pc +=2 
 
@@ -573,7 +623,7 @@ class CPU(object):
 
         """
         self.v[0xF] = (self.v[y] & 0x80) >> 7
-        self.v[y] >>= 1
+        self.v[y] <<= 1
         self.v[x] = self.v[y]
         self.pc += 2
 
@@ -633,13 +683,29 @@ class CPU(object):
     def _DXYN(self, opcode):
         """
 
-        FX65
-        Fill registers V0 to VX inclusive with the values stored in memory
-        starting at address I. I is set to I + X + 1 after operation
+        DXYN
+        Draw a sprite at position VX, VY with N bytes of sprite data 
+        starting at the address stored in I. Set VF to 01 if any set
+        pixels are changed to unset, and 00 otherwise
 
         @param opcode the opcode
 
         """
+        pos_x = self.get_x(opcode)
+        pos_y = self.get_y(opcode)
+        height = self.get_n(opcode)
+
+        self.v[0xF] = 0
+
+        for y in range(height):
+            pixel = self.memory[self.i + y]
+            for x in range(8):
+                if pixel & (0x80 >> x) != 0:
+                    if self.gfx[pos_x + x + ((pos_y + y) * 64)] == 1:
+                        self.v[0xF] = 1
+                    self.gfx[pos_x + x + ((pos_y + y) * 64)] ^= 1
+
+        self.shouldDraw = True
         self.pc += 2
 
     def _EXKK(self, opcode):
@@ -714,7 +780,25 @@ class CPU(object):
         @param x the index for VX
 
         """
-        pass
+        is_key_pressed = False
+
+        while not is_key_pressed:
+            event = pygame.event.wait()
+
+            if event.type == pygame.KEYDOWN:
+                key_states = pygame.key.get_pressed()
+                try:
+                    for key, val in KEY_MAP.items():
+                        if key_states[key]:
+                            self.v[x] = val
+                            is_key_pressed = True
+                except KeyError:
+                    pass
+
+            if event.type == pygame.QUIT:
+                exit()
+
+        self.pc += 2
 
     def _FX15(self, x):
         """
