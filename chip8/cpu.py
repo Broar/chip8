@@ -722,9 +722,11 @@ class CPU(object):
             pixel = self.memory[self.i + y]
             for x in range(8):
                 if pixel & (0x80 >> x) != 0:
-                    if self.gfx[pos_x + x + ((pos_y + y) * 64)] == 1:
-                        self.v[0xF] = 1
-                    self.gfx[pos_x + x + ((pos_y + y) * 64)] ^= 1
+                    pos = pos_x + x + ((pos_y + y) * WIDTH)
+                    if pos < len(self.gfx):
+                        if self.gfx[pos] == 1:
+                            self.v[0xF] = 1
+                        self.gfx[pos] ^= 1
 
         self.shouldDraw = True
         self.pc += 2
