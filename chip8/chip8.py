@@ -17,7 +17,7 @@ Contains the main driver function for the CHIP-8 emulator
 REQUIRED_ARGS = 2
 
 # Timing
-DELAY = 0.016
+DELAY = 0.006
 
 # Screen display
 SCALE = 10

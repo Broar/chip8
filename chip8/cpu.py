@@ -76,6 +76,8 @@ class CPU(object):
 
         """
 
+        self.operand = 0
+
         # Graphics
         self.gfx = [0 for y in range(WIDTH * HEIGHT)]
         self.shouldDraw = False
@@ -166,7 +168,7 @@ class CPU(object):
 
         """
 
-        string = ""
+        '''string = ""
         for i in range(WIDTH * HEIGHT):
             if self.gfx[i]:
                 string += "*"
@@ -181,7 +183,12 @@ class CPU(object):
         string += "I = {0}\n".format(hex(self.i))
 
         for i in range(REGISTERS):
-            string += "V{0} = {1}\n".format(i, hex(self.v[i]))
+            string += "V{0} = {1}\n".format(i, hex(self.v[i]))'''
+
+        string = 'PC: {:4X}  OP: {:4X}\n'.format(self.pc, self.operand)
+        for index in range(0x10):
+            string += 'V{:X}: {:2X}\n'.format(index, self.v[index])
+        string += 'I: {:4X}\n'.format(self.i)
 
         return string
 
@@ -265,7 +272,8 @@ class CPU(object):
         @param opcode the opcode to decode
 
         """
-        #print(hex(opcode))
+        self.operand = opcode
+        #print(self)
         self.opcodes[self.decode_opcode(opcode)](opcode)
 
     def update_timers(self):
@@ -691,8 +699,8 @@ class CPU(object):
         @param opcode the opcode
 
         """
-        pos_x = self.get_x(opcode)
-        pos_y = self.get_y(opcode)
+        pos_x = self.v[self.get_x(opcode)]
+        pos_y = self.v[self.get_y(opcode)]
         height = self.get_n(opcode)
 
         self.v[0xF] = 0
@@ -879,7 +887,7 @@ class CPU(object):
 
         """
         for j in range(x + 1):
-            self.memory[self.i] = self.v[j]
+            self.memory[self.i + j] = self.v[j]
             self.i += 1
 
         self.pc += 2
@@ -895,7 +903,7 @@ class CPU(object):
 
         """
         for j in range(x + 1):
-            self.v[j] = self.memory[self.i]
+            self.v[j] = self.memory[self.i + j]
             self.i += 1
 
         self.pc += 2
