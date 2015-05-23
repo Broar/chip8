@@ -272,9 +272,22 @@ class CPU(object):
         @param opcode the opcode to decode
 
         """
-        self.operand = opcode
-        #print(self)
+        print(hex(opcode))
         self.opcodes[self.decode_opcode(opcode)](opcode)
+
+    def update_keys(self, key_states):
+        """
+
+        Mark the keys that have been pressed this cycle
+
+        """
+        key_states = pygame.key.get_pressed()
+
+        for key, val in KEY_MAP.items():
+            if key_states[key]:
+                self.keys[val] = True
+            else:
+                self.keys[val] = False
 
     def update_timers(self):
         """

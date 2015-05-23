@@ -91,10 +91,12 @@ def main(argv):
             cpu.shouldDraw = False
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.KEYDOWN:
+                cpu.update_keys(pygame.key.get_pressed())
+            elif event.type == pygame.QUIT:
                 running = False
 
-        sleep(DELAY)
+        #sleep(DELAY)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
