@@ -903,8 +903,8 @@ class CPU(object):
         """
         for j in range(x + 1):
             self.memory[self.i + j] = self.v[j]
-            self.i += 1
 
+        self.i = x + 1
         self.pc += 2
 
     def _FX65(self, x):
@@ -919,6 +919,6 @@ class CPU(object):
         """
         for j in range(x + 1):
             self.v[j] = self.memory[self.i + j]
-            self.i += 1
 
+        self.i = x + 1
         self.pc += 2
