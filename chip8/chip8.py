@@ -17,7 +17,7 @@ Contains the main driver function for the CHIP-8 emulator
 REQUIRED_ARGS = 2
 
 # Timing
-DELAY = 0.006
+DELAY = 0.001
 
 # Screen display
 SCALE = 10
@@ -50,9 +50,9 @@ def draw(screen, gfx):
     for y in range(HEIGHT):
         for x in range(WIDTH):
             if gfx[(y * WIDTH) + x]:
-                pygame.draw.rect(screen, WHITE, ((x % WIDTH) * SCALE, (y % HEIGHT) * SCALE, SCALE, SCALE))
+                pygame.draw.rect(screen, WHITE, (x * SCALE, y * SCALE, SCALE, SCALE))
             else:
-                pygame.draw.rect(screen, BLACK, ((x % WIDTH) * SCALE, (y % HEIGHT) * SCALE, SCALE, SCALE))
+                pygame.draw.rect(screen, BLACK, (x * SCALE, y * SCALE, SCALE, SCALE))
 
     pygame.display.flip()
 
@@ -90,13 +90,14 @@ def main(argv):
             draw(screen, cpu.gfx)
             cpu.shouldDraw = False
 
+        # Consume any events that occured in the past cycle
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 cpu.update_keys(pygame.key.get_pressed())
             elif event.type == pygame.QUIT:
                 running = False
 
-        #sleep(DELAY)
+        sleep(DELAY)
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

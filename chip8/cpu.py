@@ -65,7 +65,7 @@ class CPU(object):
     A class representing the CHIP-8 CPU that follows the below specifications:
 
     http://en.wikipedia.org/wiki/CHIP-8#Virtual_machine_description
-    http://mattmik.com/chip8.html
+    http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 
     """
 
@@ -75,9 +75,7 @@ class CPU(object):
         Create a new CPU object for the CHIP-8 virtual machine.
 
         """
-
-        self.operand = 0
-
+        
         # Graphics
         self.gfx = [0 for y in range(WIDTH * HEIGHT)]
         self.shouldDraw = False
@@ -168,7 +166,7 @@ class CPU(object):
 
         """
 
-        '''string = ""
+        string = ""
         for i in range(WIDTH * HEIGHT):
             if self.gfx[i]:
                 string += "*"
@@ -183,12 +181,7 @@ class CPU(object):
         string += "I = {0}\n".format(hex(self.i))
 
         for i in range(REGISTERS):
-            string += "V{0} = {1}\n".format(i, hex(self.v[i]))'''
-
-        string = 'PC: {:4X}  OP: {:4X}\n'.format(self.pc, self.operand)
-        for index in range(0x10):
-            string += 'V{:X}: {:2X}\n'.format(index, self.v[index])
-        string += 'I: {:4X}\n'.format(self.i)
+            string += "V{0} = {1}\n".format(i, hex(self.v[i]))
 
         return string
 
@@ -272,7 +265,6 @@ class CPU(object):
         @param opcode the opcode to decode
 
         """
-        print(hex(opcode))
         self.opcodes[self.decode_opcode(opcode)](opcode)
 
     def update_keys(self, key_states):
@@ -281,8 +273,6 @@ class CPU(object):
         Mark the keys that have been pressed this cycle
 
         """
-        key_states = pygame.key.get_pressed()
-
         for key, val in KEY_MAP.items():
             if key_states[key]:
                 self.keys[val] = True
@@ -599,16 +589,15 @@ class CPU(object):
         """
 
         8XY6
-        Store the value of register VY shifted right one bit in register VX
+        Store the value of register VX shifted right one bit in register VX
         Set register VF to the least significant bit prior to the shift
 
         @param x the index for VX
         @param y the index for VY
 
         """
-        self.v[0xF] = self.v[y] & 0x01
-        self.v[y] >>= 1
-        self.v[x] = self.v[y]
+        self.v[0xF] = self.v[x] & 0x01
+        self.v[x] >>= 1
         self.pc +=2 
 
     def _8XY7(self, x, y):
@@ -643,9 +632,8 @@ class CPU(object):
         @param y the index for VY
 
         """
-        self.v[0xF] = (self.v[y] & 0x80) >> 7
-        self.v[y] <<= 1
-        self.v[x] = self.v[y]
+        self.v[0xF] = (self.v[x] & 0x80) >> 7
+        self.v[x] <<=1
         self.pc += 2
 
     def _9XY0(self, opcode):
@@ -810,15 +798,12 @@ class CPU(object):
 
             if event.type == pygame.KEYDOWN:
                 key_states = pygame.key.get_pressed()
-                try:
-                    for key, val in KEY_MAP.items():
-                        if key_states[key]:
-                            self.v[x] = val
-                            is_key_pressed = True
-                except KeyError:
-                    pass
+                for key, val in KEY_MAP.items():
+                    if key_states[key]:
+                        self.v[x] = val
+                        is_key_pressed = True
 
-            if event.type == pygame.QUIT:
+            elif event.type == pygame.QUIT:
                 exit()
 
         self.pc += 2
@@ -896,7 +881,7 @@ class CPU(object):
 
         FX55
         Store the values of registers V0 to VX inclusive in memory starting 
-        at address I. I is set to I + X + 1 after operation
+        at address I.
 
         @param x the index for VX
 
@@ -904,7 +889,6 @@ class CPU(object):
         for j in range(x + 1):
             self.memory[self.i + j] = self.v[j]
 
-        self.i = x + 1
         self.pc += 2
 
     def _FX65(self, x):
@@ -912,7 +896,7 @@ class CPU(object):
 
         FX65
         Fill registers V0 to VX inclusive with the values stored in memory
-        starting at address I. I is set to I + X + 1 after operation
+        starting at address I.
 
         @param x the index for VX
 
@@ -920,5 +904,4 @@ class CPU(object):
         for j in range(x + 1):
             self.v[j] = self.memory[self.i + j]
 
-        self.i = x + 1
         self.pc += 2
