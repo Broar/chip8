@@ -12,7 +12,8 @@ import struct
 
 # Constants
 REQUIRED_ARGS = 2
-MAX_LENGTH = 3854
+MAX_LENGTH = 4096
+PROGRAM_START = 512
 
 class C8Disassembler(object):
 
@@ -83,7 +84,7 @@ class C8Disassembler(object):
             0x0065 : self._FX65
         }
 
-        self.load_rom(rom)
+        self.load_rom(rom, PROGRAM_START)
 
     def load_rom(self, path, offset=0):
         """
@@ -123,7 +124,7 @@ class C8Disassembler(object):
         @returns the disassembled instruction in string format
 
         """
-        self.opcodes[(opcode & 0xF000)](opcode)
+        return self.opcodes[(opcode & 0xF000)](opcode)
 
     def disassemble(self):
         """
@@ -131,16 +132,22 @@ class C8Disassembler(object):
         Transform a CHIP-8 ROM into a human-readable text file
 
         """
-        for i in range(MAX_LENGTH):
+        for i in range(PROGRAM_START, MAX_LENGTH, 2):
             opcode = self.fetch_opcode(i)
 
             # We treat a blank opcode as a signal that the program has ended
             if opcode == 0x0:
                 break
 
-            print("{0:#X}\t".format(i),)
-            print("{0}\n".format(self.lookup_opcode(opcode)))
-            i += 2
+            try:
+                trans = self.lookup_opcode(opcode)
+            except KeyError:
+                print "ERROR {0:X}".format(opcode)
+
+            hi = self.get_hi(opcode)
+            lo = self.get_lo(opcode)
+
+            print("{0:X} {1:X} {2:01X} {3}".format(i, hi, lo, trans))
 
     # Helpful getter fuctions
     def get_hi(self, opcode):
@@ -165,6 +172,179 @@ class C8Disassembler(object):
         """
         return (opcode & 0x00FF)
 
+    def get_nnn(self, opcode):
+        """
+
+        Get the lowest 12 bits (nnn or addr) of an instruction
+
+        @param opcode the opcode
+        @returns lowest 12 bits of an instruction representing a memory address
+
+        """
+        return opcode & 0x0FFF
+
+    def get_nn(self, opcode):
+        """
+
+        Get the lowest 8 bits (nn or byte) of an instruction
+        
+        @param opcode the opcode
+        @returns the lowest 8 bits of an instruction
+        
+        """
+        return opcode & 0x00FF
+
+    def get_n(self, opcode):
+        """
+
+        Get the lowest 4 bits (n or nibble) of an instruction
+
+        @param opcode the opcode
+        @returns lowest 4 bits of an instruction
+
+        """
+        return opcode & 0x000F
+
+    def get_x(self, opcode):
+        """
+
+        Get the lower 4 bits of the high byte (x) of an instruction
+        
+        @param opcode the opcode
+        @returns the lower 4 bits of the high byte of an instruction
+
+        """
+        return (opcode & 0x0F00) >> 8
+
+    def get_y(self, opcode):
+        """
+
+        Get the higher 4 bits of the low byte (y) of an instruction
+        
+        @param opcode the opcode
+        @returns the higher 4 bits of the low byte of an instruction
+        
+        """
+        return (opcode & 0x00F0) >> 4
+
+    # Opcode functions for disassembly    
+    def _0KKK(self, opcode):
+        return self.subroutine[self.get_n(opcode)]()
+
+    def _00E0(self):
+        return "CLS"
+
+    def _00EE(self):
+        return "RET"
+
+    def _1NNN(self, opcode):
+        return "JP {0:X}".format(self.get_nnn(opcode))
+
+    def _2NNN(self, opcode):
+        return "CALL {0:X}".format(self.get_nnn(opcode))
+    
+    def _3XNN(self, opcode):
+        return "SE V{0:X}, {1:X}".format(self.get_x(opcode), self.get_nn(opcode))
+
+    def _4XNN(self, opcode):
+        return "SNE V{0:X}, {1:X}".format(self.get_x(opcode), self.get_nn(opcode))
+
+    def _5XY0(self, opcode):
+        return "SE V{0:X}, V{1:X}".format(self.get_x(opcode), self.get_y(opcode))
+
+    def _6XNN(self, opcode):
+        return "LD V{0:X}, {1:X}".format(self.get_x(opcode), self.get_nn(opcode))
+
+    def _7XNN(self, opcode):
+        return "ADD V{0:X}, {1:X}".format(self.get_x(opcode), self.get_nn(opcode))
+
+    def _8XYK(self, opcode):
+        return self.arthimetic[self.get_n(opcode)](self.get_x(opcode), self.get_y(opcode))
+
+    def _8XY0(self, x, y):
+        return "LD V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY1(self, x, y):
+        return "OR V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY2(self, x, y):
+        return "AND V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY3(self, x, y):
+        return "XOR V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY4(self, x, y):
+        return "ADD V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY5(self, x, y):
+        return "SUB V{0:X}, V{1:X}".format(x, y)
+
+    def _8XY6(self, x, y):
+        return "SHR V{0:X} {{, V{1:X}}}".format(x, y)
+
+    def _8XY7(self, x, y):
+        return "SUBN V{0:X}, V{1:X}".format(x, y)
+
+    def _8XYE(self, x, y):
+        return "SHL V{0:X}, {{, V{1:X}}}".format(x, y)
+
+    def _9XY0(self, opcode):
+        return "SNE V{0:X}, V{1:X}".format(self.get_x(opcode), self.get_y(opcode))
+
+    def _ANNN(self, opcode):
+        return "LD I, {0:X}".format(self.get_nnn(opcode))
+
+    def _BNNN(self, opcode):
+        return "JP V0, {0:X}".format(self.get_nnn(opcode))
+
+    def _CXNN(self, opcode):
+        return "RND V{0:X}, {1:X}".format(self.get_x(opcode), self.get_nn(opcode))
+
+    def _DXYN(self, opcode):
+        x = self.get_x(opcode)
+        y = self.get_y(opcode)
+        n = self.get_n(opcode)
+        return "DRW V{0:X}, V{1:X}, {2:X}".format(x, y, n)
+
+    def _EXKK(self, opcode):
+        return self.skip_keys[self.get_n(opcode)](self.get_x(opcode))
+
+    def _EX9E(self, x):
+        return "SKP V{0:X}".format(x)
+
+    def _EXA1(self, x):
+        return "SKNP V{0:X}".format(x)
+
+    def _FXKK(self, opcode):
+        return self.misc[self.get_nn(opcode)](self.get_x(opcode))
+
+    def _FX07(self, x):
+        return "LD V{0:X}, DT".format(x)
+
+    def _FX0A(self, x):
+        return "LD V{0:X}, K".format(x)
+
+    def _FX15(self, x):
+        return "LD DT, V{0:X}".format(x)
+
+    def _FX18(self, x):
+        return "LD ST, V{0:X}".format(x)
+
+    def _FX1E(self, x):
+        return "ADD I, V{0:X}".format(x)
+
+    def _FX29(self, x):
+        return "LD F, V{0:X}".format(x)
+
+    def _FX33(self, x):
+        return "LD B, V{0:X}".format(x)
+
+    def _FX55(self, x):
+        return "LD [I], V{0:X}".format(x)
+
+    def _FX65(self, x):
+        return "LD V{0:X}, [I]".format(x)
+
 def usage(name):
     """
 
@@ -174,7 +354,6 @@ def usage(name):
     @returns a string containing the usage message
 
     """
-
     return "Usage: python {0} rom".format(name)
 
 
@@ -183,10 +362,9 @@ def main(argv):
 
     Driver function for the disassembler. 
 
-    Requires two arguments that specify the CHIP-8 ROM to be disassembled
-    and a file to write the output.
+    Requires a single argument that specifies the CHIP-8 ROM to be disassembled.
 
-    @param args the arguments for invoking the program
+    @param argv the arguments for invoking the program
 
     """
     
