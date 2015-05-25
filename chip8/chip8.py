@@ -66,11 +66,8 @@ def main(argv):
     """
 
     # Check that there are enough arguments to run the emulator
-    if (len(argv) < REQUIRED_ARGS):
+    if len(argv) < REQUIRED_ARGS:
         exit(usage(argv[0]))
-
-    print("chip8 emulator")
-    print("argv: ", argv)
 
     # Prepare the emulator
     cpu = CPU()
