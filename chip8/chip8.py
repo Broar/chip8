@@ -89,9 +89,9 @@ def main(argv):
 
         # Consume any events that occured in the past cycle
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                cpu.update_keys(pygame.key.get_pressed())
-            elif event.type == pygame.QUIT:
+            cpu.update_keys(pygame.key.get_pressed())
+            
+            if event.type == pygame.QUIT:
                 running = False
 
         sleep(DELAY)

@@ -1,30 +1,47 @@
 """
 
-A simple disassembler for CHIP-8 ROMS
+A simple disassembler for CHIP-8 ROMS that prints psuedo-assembly.
+
+See the following specifications for details:
+
+http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 
 @author Steven Briggs
 @version 2015.05.24
 
 """
 
+import os
 import sys
 import struct
 
 # Constants
 REQUIRED_ARGS = 2
-MAX_LENGTH = 4096
+MAX_LENGTH = 4096 - 512
 PROGRAM_START = 512
 
 class C8Disassembler(object):
+    """
+
+    A class that can disassemble CHIP-8 ROMs into human-readable format.
+
+    @author Steven Briggs
+    @version 2015.05.25
+
+    """
+
 
     def __init__(self, rom):
         """
 
         Create a new C8Disassembler object
 
+        @param rom the rom to be disassembled
+
         """
 
         self.program = [0 for x in range(MAX_LENGTH)]
+        self.size = os.stat(rom).st_size
 
         # Opcode table: 'K' denotes an opcode with multiple matches
         self.opcodes = {
@@ -84,7 +101,7 @@ class C8Disassembler(object):
             0x0065 : self._FX65
         }
 
-        self.load_rom(rom, PROGRAM_START)
+        self.load_rom(rom)
 
     def load_rom(self, path, offset=0):
         """
@@ -129,25 +146,21 @@ class C8Disassembler(object):
     def disassemble(self):
         """
 
-        Transform a CHIP-8 ROM into a human-readable text file
+        Transform a CHIP-8 ROM into a human-readable print out
 
         """
-        for i in range(PROGRAM_START, MAX_LENGTH, 2):
+        for i in range(0, self.size, 2):
             opcode = self.fetch_opcode(i)
-
-            # We treat a blank opcode as a signal that the program has ended
-            if opcode == 0x0:
-                break
-
-            try:
-                trans = self.lookup_opcode(opcode)
-            except KeyError:
-                print "ERROR {0:X}".format(opcode)
 
             hi = self.get_hi(opcode)
             lo = self.get_lo(opcode)
 
-            print("{0:X} {1:X} {2:01X} {3}".format(i, hi, lo, trans))
+            # Search for the opcode. Print any illegal instructions found
+            try:
+                trans = self.lookup_opcode(opcode)
+                print("{0:X} {1:02X} {2:02X} {3}".format(i + PROGRAM_START, hi, lo, trans))
+            except KeyError:
+                print("{0:X} {1:02X} {2:02X} UNKNOWN".format(i + PROGRAM_START, hi, lo, opcode))
 
     # Helpful getter fuctions
     def get_hi(self, opcode):
@@ -374,12 +387,11 @@ def main(argv):
 
     rom = argv[1]
 
-    print("CHIP-8 Disassembler v.0.1")
+    print("CHIP-8 Disassembler v.1.0")
     print("Input: {0}\n".format(rom))
 
     disassembler = C8Disassembler(rom)
     disassembler.disassemble()
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
